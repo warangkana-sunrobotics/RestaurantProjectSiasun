@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New order — Playtorium</title>
+<style>
+  :root {
+    --paper: #f6f3ec;
+    --card: #fffdf8;
+    --ink: #23201b;
+    --ink-soft: #6d675c;
+    --line: #e0d9cb;
+    --accent: #1f5c4d;
+    --accent-soft: #e4efe9;
+    --strike: #b23a2e;
+    --strike-soft: #f6e6e2;
+    --shadow: 0 1px 0 #ede7db, 0 12px 30px -18px rgba(35,32,27,.35);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.5;
+  }
+  .num { font-family: "SFMono-Regular", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  header { max-width: 860px; margin: 0 auto; padding: 40px 24px 8px; }
+  header .kicker { font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: .12em; color: var(--accent); }
+  header h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.08; margin: 6px 0 4px; font-weight: 600; }
+  header p { color: var(--ink-soft); margin: 0; max-width: 60ch; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 20px; }
+  .panel + .panel { margin-top: 24px; }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; font-weight: 600; display: flex; align-items: baseline; justify-content: space-between; }
+  .panel h2 small { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--ink-soft); font-weight: 400; }
+  .row { display: grid; grid-template-columns: 1fr 128px 88px 32px; gap: 8px; margin-bottom: 8px; }
+  @media (max-width: 460px) { .row { grid-template-columns: 1fr 1fr; } }
+  input, select, button { font: inherit; }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+  input.num { text-align: right; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .icon-btn { border: 1px solid var(--line); background: #fff; border-radius: 8px; cursor: pointer; color: var(--ink-soft); line-height: 1; }
+  .icon-btn:hover { border-color: var(--strike); color: var(--strike); }
+  .add-link { background: none; border: 1px dashed var(--line); color: var(--accent); border-radius: 8px; padding: 8px 12px; cursor: pointer; width: 100%; margin-top: 4px; }
+  .add-link:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .camp { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .camp.disabled { opacity: .55; }
+  .camp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .camp-head label { font-weight: 600; cursor: pointer; }
+  .camp-head .tag { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .06em; color: var(--accent); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .camp-body { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .camp-body .full { grid-column: 1 / -1; }
+  .field small { display: block; color: var(--ink-soft); font-size: 12px; margin-bottom: 3px; }
+  input[type="checkbox"] { width: auto; }
+  .exclusive-note { font-size: 12px; color: var(--strike); background: var(--strike-soft); border-radius: 6px; padding: 6px 8px; margin-top: 6px; display: none; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+  .review-btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px 22px; font-size: 15px; cursor: pointer; font-weight: 600; }
+  .review-btn:hover { background: #1a4d41; }
+  .error { color: var(--strike); background: var(--strike-soft); border: 1px solid #ecccc5; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+  .error:empty { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">step 1 of 2 · build the order</div>
+  <h1>Ring up the cart</h1>
+  <p>Add the items and choose the campaigns to apply. When you're ready, review the order total. Only one campaign per category is allowed — coupon, on-top, and seasonal.</p>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h2>Shopping cart <small>name · category · price</small></h2>
+    <div id="cart"></div>
+    <button class="add-link" id="addItem">+ Add item</button>
+  </div>
+
+  <div class="panel">
+    <h2>Campaigns <small>coupon › on-top › seasonal</small></h2>
+
+    <div class="camp" data-group="Coupon">
+      <div class="camp-head">
+        <input type="checkbox" id="c_fixed" data-exclusive="Coupon">
+        <label for="c_fixed">Fixed amount</label><span class="tag">Coupon</span>
+      </div>
+      <div class="camp-body">
+        <div class="field full"><small>Amount off (THB)</small>
+          <input class="num" type="number" id="c_fixed_amount" value="50" min="0" step="1"></div>
+      </div>
+    </div>
+
+    <div class="camp" data-group="Coupon">
+      <div class="camp-head">
+        <input type="checkbox" id="c_pct" data-exclusive="Coupon">
+        <label for="c_pct">Percentage discount</label><span class="tag">Coupon</span>
+      </div>
+      <div class="camp-body">
+        <div class="field full"><small>Percent off the whole cart</small>
+          <input class="num" type="number" id="c_pct_val" value="10" min="0" max="100" step="0.5"></div>
+      </div>
+    </div>
+    <div class="exclusive-note" id="note_Coupon">Only one coupon can apply.</div>
+
+    <div class="camp" data-group="OnTop" style="margin-top:14px;">
+      <div class="camp-head">
+        <input type="checkbox" id="c_cat" data-exclusive="OnTop">
+        <label for="c_cat">Percentage off a category</label><span class="tag">On&nbsp;Top</span>
+      </div>
+      <div class="camp-body">
+        <div class="field"><small>Category</small>
+          <select id="c_cat_name"><option>Dessert</option><option>Main_course</option><option>Beverage</option></select></div>
+        <div class="field"><small>Percent off</small>
+          <input class="num" type="number" id="c_cat_pct" value="15" min="0" max="100" step="0.5"></div>
+      </div>
+    </div>
+
+    <div class="camp" data-group="OnTop">
+      <div class="camp-head">
+        <input type="checkbox" id="c_pts" data-exclusive="OnTop">
+        <label for="c_pts">Discount by points</label><span class="tag">On&nbsp;Top</span>
+      </div>
+      <div class="camp-body">
+        <div class="field full"><small>Points to spend (1 point = ฿1, capped at 20% of total)</small>
+          <input class="num" type="number" id="c_pts_val" value="68" min="0" step="1"></div>
+      </div>
+    </div>
+    <div class="exclusive-note" id="note_OnTop">Only one on-top campaign can apply.</div>
+
+    <div class="camp" data-group="Seasonal" style="margin-top:14px;">
+      <div class="camp-head">
+        <input type="checkbox" id="c_seasonal" data-exclusive="Seasonal">
+        <label for="c_seasonal">Special seasonal</label><span class="tag">Seasonal</span>
+      </div>
+      <div class="camp-body">
+        <div class="field"><small>At every (THB)</small>
+          <input class="num" type="number" id="c_seasonal_every" value="300" min="1" step="1"></div>
+        <div class="field"><small>Take off (THB)</small>
+          <input class="num" type="number" id="c_seasonal_disc" value="40" min="0" step="1"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div id="formError" class="error"></div>
+    <div class="actions">
+      <button class="review-btn" id="review">Review order total →</button>
+    </div>
+  </div>
+</div>
+
+<script src="discount-engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var seed = [
+    { name: 'Ice cream', category: 'Dessert', price: 50 },
+    { name: 'Spicy chicken', category: 'Main_course', price: 350 },
+    { name: 'Lemonade', category: 'Beverage', price: 100 }
+  ];
+
+  function catOptions(sel) {
+    return ['Dessert', 'Main_course', 'Beverage'].map(function (c) {
+      return '<option' + (c === sel ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+  }
+
+  function addRow(item) {
+    item = item || { name: '', category: 'Dessert', price: '' };
+    var row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML =
+      '<input class="i-name" type="text" placeholder="Item name" value="' + item.name + '">' +
+      '<select class="i-cat">' + catOptions(item.category) + '</select>' +
+      '<input class="num i-price" type="number" min="0" step="0.01" placeholder="0.00" value="' + item.price + '">' +
+      '<button class="icon-btn i-del" title="Remove" aria-label="Remove item">×</button>';
+    $('cart').appendChild(row);
+    row.querySelector('.i-del').addEventListener('click', function () { row.remove(); });
+  }
+
+  function readCart() {
+    var items = [];
+    document.querySelectorAll('#cart .row').forEach(function (row) {
+      var name = row.querySelector('.i-name').value.trim();
+      var category = row.querySelector('.i-cat').value;
+      var raw = row.querySelector('.i-price').value;
+      if (raw === '' && name === '') return;
+      items.push({ name: name || 'Item', category: category, price: parseFloat(raw) });
+    });
+    return items;
+  }
+
+  function readCampaigns() {
+    var list = [];
+    if ($('c_fixed').checked)    list.push({ type: 'fixed', amount: parseFloat($('c_fixed_amount').value) });
+    if ($('c_pct').checked)      list.push({ type: 'percentage', percentage: parseFloat($('c_pct_val').value) });
+    if ($('c_cat').checked)      list.push({ type: 'categoryPercentage', category: $('c_cat_name').value, percentage: parseFloat($('c_cat_pct').value) });
+    if ($('c_pts').checked)      list.push({ type: 'points', points: parseFloat($('c_pts_val').value) });
+    if ($('c_seasonal').checked) list.push({ type: 'seasonal', every: parseFloat($('c_seasonal_every').value), discount: parseFloat($('c_seasonal_disc').value) });
+    return list;
+  }
+
+  function wireExclusivity() {
+    document.querySelectorAll('input[data-exclusive]').forEach(function (cb) {
+      cb.addEventListener('change', function () {
+        if (cb.checked) {
+          var group = cb.getAttribute('data-exclusive');
+          document.querySelectorAll('input[data-exclusive="' + group + '"]').forEach(function (other) {
+            if (other !== cb) other.checked = false;
+          });
+        }
+        syncDisabled();
+      });
+    });
+  }
+
+  function syncDisabled() {
+    document.querySelectorAll('.camp').forEach(function (camp) {
+      var cb = camp.querySelector('input[type="checkbox"]');
+      camp.classList.toggle('disabled', cb && !cb.checked);
+    });
+  }
+
+  function review() {
+    var err = $('formError');
+    err.textContent = '';
+    var cart = readCart();
+    var campaigns = readCampaigns();
+
+    if (!cart.length) {
+      err.textContent = 'Add at least one item before reviewing the order.';
+      return;
+    }
+    // Validate by running the engine now, so errors surface on this page.
+    try {
+      DiscountEngine.calculate(cart, campaigns);
+    } catch (e) {
+      err.textContent = e.message;
+      return;
+    }
+    var payload = encodeURIComponent(JSON.stringify({ cart: cart, campaigns: campaigns }));
+    window.location.href = 'order-total.html?order=' + payload;
+  }
+
+  seed.forEach(addRow);
+  wireExclusivity();
+  syncDisabled();
+  $('addItem').addEventListener('click', function () { addRow(); });
+  $('review').addEventListener('click', review);
+})();
+</script>
+</body>
+</html>

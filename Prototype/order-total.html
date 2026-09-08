@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order total — Playtorium</title>
+<style>
+  :root {
+    --paper: #f6f3ec;
+    --card: #fffdf8;
+    --ink: #23201b;
+    --ink-soft: #6d675c;
+    --line: #e0d9cb;
+    --accent: #1f5c4d;
+    --accent-soft: #e4efe9;
+    --strike: #b23a2e;
+    --strike-soft: #f6e6e2;
+    --shadow: 0 1px 0 #ede7db, 0 12px 30px -18px rgba(35,32,27,.35);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; line-height: 1.5;
+  }
+  .num { font-family: "SFMono-Regular", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  header { max-width: 640px; margin: 0 auto; padding: 40px 24px 8px; }
+  header .kicker { font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: .12em; color: var(--accent); }
+  header h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.08; margin: 6px 0 4px; font-weight: 600; }
+  header p { color: var(--ink-soft); margin: 0; max-width: 60ch; }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 24px; }
+  .layout { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 22px; }
+
+  /* QR payment panel */
+  .qr-panel { text-align: center; position: sticky; top: 16px; }
+  .qr-figure { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+  .qr-figure img { display: block; width: 100%; height: auto; }
+  .qr-caption { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  .qr-amount { margin-top: 8px; font-size: 15px; color: var(--ink); }
+  .qr-amount b { font-weight: 600; }
+  .qr-hint { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+  .panel h2 { font-size: 15px; margin: 0 0 14px; font-weight: 600; display: flex; align-items: baseline; justify-content: space-between; }
+  .panel h2 small { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--ink-soft); font-weight: 400; }
+
+  .cart-table { width: 100%; border-collapse: collapse; }
+  .cart-table thead th { text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 0 0 6px; }
+  .cart-table th.r, .cart-table td.r { text-align: right; }
+  .cart-table tbody td { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; vertical-align: top; }
+  .cart-table td.cat { color: var(--ink-soft); font-size: 12px; }
+
+  .ledger { margin-top: 14px; }
+  .ledger-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
+  .ledger-row .label { color: var(--ink-soft); font-size: 14px; }
+  .ledger-row .label b { color: var(--ink); font-weight: 600; }
+  .ledger-row .step-note { font-size: 11px; color: var(--ink-soft); }
+  .ledger-row .amt { color: var(--strike); }
+  .subtotal { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 12px; }
+  .subtotal .amt { color: var(--ink); }
+  .final { border-top: 2px solid var(--ink); margin-top: 10px; padding-top: 12px; }
+  .final .label { font-weight: 600; color: var(--ink); font-size: 15px; }
+  .final .amt { color: var(--ink); font-size: 26px; font-weight: 600; }
+  .saved { text-align: center; margin-top: 12px; font-size: 13px; color: var(--accent); background: var(--accent-soft); border-radius: 8px; padding: 6px; }
+  .thb::before { content: "฿"; margin-right: 2px; color: var(--ink-soft); font-weight: 400; }
+  .error { color: var(--strike); background: var(--strike-soft); border: 1px solid #ecccc5; border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 18px; color: var(--accent); text-decoration: none; font-size: 14px; }
+  .back:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">step 2 of 2 · order total</div>
+  <h1>Order total</h1>
+  <p>Here's everything in the cart with the campaigns applied.</p>
+</header>
+
+<div class="wrap">
+  <div class="layout">
+    <div class="panel">
+      <h2>Order summary <small id="itemCount"></small></h2>
+      <div id="result"></div>
+      <a class="back" href="index.html">← Edit the order</a>
+    </div>
+
+    <div class="panel qr-panel">
+      <h2>Scan to pay <small>Thai QR · PromptPay</small></h2>
+      <figure class="qr-figure" style="margin:0;">
+        <img src="qrcode.png" alt="Thai QR PromptPay payment code for Rommai School">
+      </figure>
+      <div class="qr-caption">ROMMAI SCHOOL<br>Biller ID: 099400025313301</div>
+      <div class="qr-amount" id="qrAmount"></div>
+      <div class="qr-hint">Open your banking app and scan the code to pay the total above.</div>
+    </div>
+  </div>
+</div>
+
+<script src="discount-engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var escapeHtml = function (s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  };
+  var STEP_LABEL = {
+    fixed: 'Fixed amount', percentage: 'Percentage discount',
+    categoryPercentage: 'Category discount', points: 'Points redeemed',
+    seasonal: 'Seasonal offer'
+  };
+
+  function getOrder() {
+    var params = new URLSearchParams(window.location.search);
+    var raw = params.get('order');
+    if (!raw) return null;
+    try { return JSON.parse(decodeURIComponent(raw)); }
+    catch (e) { return undefined; } // malformed
+  }
+
+  function hideQr() {
+    var qr = document.querySelector('.qr-panel');
+    if (qr) qr.style.display = 'none';
+  }
+
+  function render() {
+    var result = $('result');
+    var order = getOrder();
+
+    if (order === null) {
+      result.innerHTML = '<div class="error">No order to show yet. Start by building the cart.</div>';
+      $('itemCount').textContent = '';
+      hideQr();
+      return;
+    }
+    if (order === undefined || !order.cart) {
+      result.innerHTML = '<div class="error">This order link looks broken. Go back and rebuild the cart.</div>';
+      $('itemCount').textContent = '';
+      hideQr();
+      return;
+    }
+
+    var out;
+    try {
+      out = DiscountEngine.calculate(order.cart, order.campaigns || []);
+    } catch (e) {
+      result.innerHTML = '<div class="error">' + escapeHtml(e.message) + '</div>';
+      $('itemCount').textContent = '';
+      hideQr();
+      return;
+    }
+
+    var cart = order.cart;
+    $('itemCount').textContent = cart.length + (cart.length === 1 ? ' item' : ' items');
+
+    var html = '<table class="cart-table"><thead><tr>' +
+      '<th>Item</th><th>Category</th><th class="r">Price</th></tr></thead><tbody>';
+    cart.forEach(function (it) {
+      html += '<tr><td>' + escapeHtml(it.name) + '</td>' +
+        '<td class="cat">' + escapeHtml(it.category) + '</td>' +
+        '<td class="r num thb">' + fmt(it.price) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+
+    html += '<div class="ledger">';
+    html += '<div class="ledger-row subtotal"><span class="label"><b>Subtotal</b></span>' +
+            '<span class="amt num thb">' + fmt(out.subtotal) + '</span></div>';
+    out.steps.forEach(function (s) {
+      html += '<div class="ledger-row"><span class="label">−&nbsp;' + (STEP_LABEL[s.type] || s.type) +
+        '<br><span class="step-note">on ฿' + fmt(s.before) + ' → ฿' + fmt(s.after) + '</span></span>' +
+        '<span class="amt num">−' + fmt(s.discount) + '</span></div>';
+    });
+    html += '<div class="ledger-row final"><span class="label">Total price</span>' +
+            '<span class="amt num thb">' + fmt(out.finalPrice) + '</span></div>';
+    html += '</div>';
+    if (out.totalDiscount > 0) {
+      html += '<div class="saved">You saved ฿' + fmt(out.totalDiscount) + '</div>';
+    }
+    result.innerHTML = html;
+
+    var qrAmount = $('qrAmount');
+    if (qrAmount) {
+      qrAmount.innerHTML = 'Amount due: <b class="num thb">' + fmt(out.finalPrice) + '</b>';
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
