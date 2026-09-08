@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบสั่งอาหารและชำระเงิน - Food Management System</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Font -->
+  
+  <!-- เชื่อมโยงไฟล์ CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-20">
+    <div class="max-w-xl mx-auto flex justify-between items-center">
+      <div>
+        <h1 class="text-lg font-semibold tracking-wide">ระบบสั่งอาหารออนไลน์</h1>
+        <p class="text-xs text-slate-400">ร้านอาหาร (Restaurant)</p>
+      </div>
+      
+      <div class="bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2">
+        <span class="text-slate-400">โต๊ะ:</span>
+        <select id="table-select" class="bg-transparent font-bold text-white focus:outline-none cursor-pointer">
+          <option value="01" class="text-slate-900">01</option>
+          <option value="02" class="text-slate-900">02</option>
+          <option value="03" class="text-slate-900">03</option>
+          <option value="04" class="text-slate-900">04</option>
+          <option value="05" class="text-slate-900">05</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-xl mx-auto p-4">
+
+    <!-- PAGE 1: หน้าสั่งอาหาร -->
+    <div id="page-menu" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+        <div id="category-filters" class="flex gap-1 overflow-x-auto text-xs font-medium">
+          <button id="btn-cat-all" class="cat-btn active bg-slate-900 text-white px-3 py-1.5 rounded-md transition">ทั้งหมด</button>
+          <button id="btn-cat-single" class="cat-btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-md transition">อาหารจานเดียว</button>
+
+          <button id="btn-cat-soup" class="cat-btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-md transition">ต้ม/แกง</button>
+          <button id="btn-cat-drink" class="cat-btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-3 py-1.5 rounded-md transition">เครื่องดื่ม</button>
+        </div>
+      </div>
+
+      <!-- Container รายการเมนู -->
+      <div id="menu-list" class="space-y-2.5"></div>
+
+      <!-- แถบสรุปด้านล่าง -->
+      <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 shadow-2xl z-10">
+        <div class="max-w-xl mx-auto flex items-center justify-between gap-2">
+          <div>
+            <p class="text-xs text-slate-500">ยอดสั่งรอบนี้</p>
+            <p class="text-lg font-bold text-slate-900"><span id="cart-total">0.00</span> <span class="text-xs font-normal text-slate-600">THB</span></p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-view-bill" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium px-3 py-2.5 rounded-lg border border-slate-300 transition">
+              🧾 ดูบิลโต๊ะนี้
+            </button>
+            <button id="btn-submit-order" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-lg shadow transition">
+              ส่งสั่งอาหาร &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: หน้าบิลสรุปรายการรวม & QR Code -->
+    <div id="page-bill" class="hidden space-y-4">
+      <button id="btn-back-to-menu" class="text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1 mb-2 transition">
+        &larr; กลับไปสั่งอาหารเพิ่ม
+      </button>
+
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-5">
+        <div class="text-center border-b border-slate-200 pb-4">
+          <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">Active Session</span>
+          <h2 class="text-lg font-bold text-slate-900 tracking-wide mt-1">สรุปรายการอาหารรวมทุกรอบ</h2>
+          <p class="text-xs text-slate-500 mt-0.5">โต๊ะหมายเลข: <span id="bill-table-no" class="font-bold text-slate-800">01</span></p>
+          <p class="text-[10px] text-slate-400 mt-0.5" id="bill-date"></p>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between font-semibold text-slate-500 border-b border-slate-100 pb-1">
+            <span>รายการ</span>
+            <div class="space-x-8">
+              <span>จำนวนรวม</span>
+              <span>ราคารวม</span>
+            </div>
+          </div>
+          <div id="bill-items" class="space-y-2 text-slate-700"></div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-3 flex justify-between items-center text-sm font-bold text-slate-900">
+          <span>ยอดชำระสุทธิทั้งสิ้น</span>
+          <span class="text-base text-slate-900"><span id="bill-total-price">0.00</span> THB</span>
+        </div>
+
+        <div class="border-t border-slate-200 pt-5 text-center space-y-2 bg-slate-50 p-4 rounded-lg">
+          <p class="text-xs font-medium text-slate-700">สแกน QR Code เพื่อชำระเงินตามยอดรวมล่าสุด</p>
+          <div class="flex justify-center py-2">
+            <img id="qr-code-img" src="" alt="PromptPay QR Code" class="w-44 h-44 border border-slate-200 p-2 rounded bg-white shadow-sm">
+          </div>
+          <p class="text-[11px] text-slate-500 font-mono">พร้อมเพย์: 0636407429 (ร้านอาหาร)</p>
+        </div>
+      </div>
+
+      <button id="btn-confirm-payment" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium py-3 rounded-lg shadow transition text-center">
+        เช็กบิล / ยืนยันชำระเงินเรียบร้อย
+      </button>
+    </div>
+
+  </div>
+
+  <!-- เชื่อมโยงไฟล์ JavaScript ไว้ตอนท้ายของ <body> -->
+  <script src="script.js"></script>
+</body>
+</html>

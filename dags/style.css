@@ -1,0 +1,27 @@
+/* กำหนด ฟอนต์หลักของทั้งเว็บไซต์ */
+@import url('https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+body { 
+    font-family: 'MALI', sans-serif;
+
+    width: 100%;
+    max-width: 640px;          /* จำกัดความกว้างไม่เกิน 640px (ไซส์แอปมือถือ/แท็บเล็ต) */
+    margin-left: auto !important;         /* จัดตัวเว็บให้อยู่ตรงกลางจอคอมพิวเตอร์ */
+    margin-right: auto !important;        /* จัดตัวเว็บให้อยู่ตรงกลางจอคอมพิวเตอร์ */
+    background-color: azure;   /* สีพื้นหลังฟ้าอ่อน */
+
+    box-sizing: border-box;    /* ป้องกันขอบล้นหน้าจอ */
+}
+
+/* ซ่อนแถบ Scrollbar สำหรับเมนูหมวดหมู่ในมือถือ */
+#category-filters::-webkit-scrollbar {
+    display: none;
+}
+#category-filters {
+     -ms-overflow-style: none;
+     scrollbar-width: none;
+}
+
+/* เอฟเฟกต์แอนิเมชันเวลากดปุ่ม */
+button:active {
+    transform: scale(0.98);
+}
