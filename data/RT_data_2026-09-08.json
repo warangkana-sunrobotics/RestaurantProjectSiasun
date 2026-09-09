@@ -1,0 +1,33 @@
+[
+    {
+        "table_id" : 1,
+        "menu": "Fired_chiken",
+        "cost": 500
+    },
+    {
+        "table_id" : 2,
+        "menu": "Icecream",
+        "cost": 75
+    },
+    {
+        "table_id" : 1,
+        "menu": "Lemonade",
+        "cost": 25
+    },
+    {
+        "table_id" : 3,
+        "menu": "Spageti",
+        "cost": 300
+    },
+    {
+        "table_id" : 2,
+        "menu": "Hamburger",
+        "cost": 250
+    },
+    {
+        "table_id" : 1,
+        "menu": "Toast",
+        "cost": 50
+    }
+
+]
