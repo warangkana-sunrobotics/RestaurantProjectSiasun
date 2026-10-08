@@ -1,3 +1,7 @@
-# .env
-# data/
+# Secrets are provided at runtime through env_file, never baked into the image
+.env
+data/
 __pycache__/
+*.pyc
+.DS_Store
+.git

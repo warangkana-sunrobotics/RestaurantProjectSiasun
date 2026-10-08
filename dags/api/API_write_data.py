@@ -8,7 +8,7 @@
 #	STANDARD IMPORTS
 #
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 import psycopg2
 
@@ -19,8 +19,6 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 import logging
-
-import json
 
 from pydantic import BaseModel
 
@@ -56,12 +54,17 @@ load_dotenv( dotenv_path = ENV_PATH )
 
 def get_conn_cursor():
     # The error will appear when use the "" with "" on python 3.10, f-string only use the "" to recieve the string inside, so If you want to select the valiable need to use the '' instead.
+    required = [ "POSTGRES_CONN_DAILY_DB", "POSTGRES_CONN_DAILY_USERNAME", "POSTGRES_CONN_DAILY_PASSWORD", "POSTGRES_CONN_DAILY_PORT" ]
+    missing = [ name for name in required if not os.getenv(name) ]
+    if missing:
+        raise RuntimeError( f"Missing environment variables: {', '.join(missing)}" )
+
     conn = psycopg2.connect(
-        host=f"{os.getenv('DB_HOST', 'localhost')}",            # <- This variable will change if It call from contianer in docker( relate to service name in docker-compose.yml )
-        dbname=f"{os.getenv('POSTGRES_CONN_DAILY_DB')}",
-        user=f"{os.getenv('POSTGRES_CONN_DAILY_USERNAME')}",
-        password=f"{os.getenv('POSTGRES_CONN_DAILY_PASSWORD')}",
-        port=f"{os.getenv('POSTGRES_CONN_DAILY_PORT')}"
+        host=os.getenv('DB_HOST', 'localhost'),            # <- This variable will change if It call from contianer in docker( relate to service name in docker-compose.yml )
+        dbname=os.getenv('POSTGRES_CONN_DAILY_DB'),
+        user=os.getenv('POSTGRES_CONN_DAILY_USERNAME'),
+        password=os.getenv('POSTGRES_CONN_DAILY_PASSWORD'),
+        port=os.getenv('POSTGRES_CONN_DAILY_PORT')
     )
     cur = conn.cursor()
     return conn, cur
@@ -118,10 +121,10 @@ def getOrderOnTable( numTable : int ):
         select_sql = f'''
         SELECT *
         FROM {SCHEMA_NAME}.{TABLE_NAME}
-        WHERE table_id = {numTable};
+        WHERE table_id = %s;
         '''
 
-        cur.execute(select_sql)
+        cur.execute(select_sql, ( numTable, ))
         output = cur.fetchall()
         columns = [ desc[0] for desc in cur.description ]
 
@@ -136,7 +139,7 @@ def getOrderOnTable( numTable : int ):
         
     except Exception as e:
         logger.error(f"An error occurred during the Select on table: {numTable} of {SCHEMA_NAME}:{TABLE_NAME} raise {e}")
-        raise e
+        raise HTTPException( status_code=500, detail="Internal database error" )
     
     finally:
         if conn and cur:
@@ -169,7 +172,7 @@ def getAllOrder():
 
     except Exception as e:
         logger.error(f"An error occurred during the Select all of {SCHEMA_NAME}:{TABLE_NAME} raise {e}")
-        raise e
+        raise HTTPException( status_code=500, detail="Internal database error" )
     
     finally:
         if conn and cur:
@@ -197,7 +200,7 @@ def insertOrderDatabase( orderUser : OrderCreate ):
 
     except Exception as e:
         logger.error( f"An error occurred during the insert orders in {SCHEMA_NAME}:{TABLE_NAME} raise {e}" )
-        raise e
+        raise HTTPException( status_code=500, detail="Internal database error" )
     
     finally:
         if conn and cur:
@@ -212,10 +215,10 @@ def deleteOrderId( idOrder : int ):
 
         delete_sql = f'''
         DELETE FROM {SCHEMA_NAME}.{TABLE_NAME}
-        WHERE order_id = {idOrder};
+        WHERE order_id = %s;
         '''
 
-        cur.execute( delete_sql )
+        cur.execute( delete_sql, ( idOrder, ) )
         conn.commit()
 
         logger.info( f"Delelt the orderId from the database which was id = { idOrder }" )
@@ -224,7 +227,7 @@ def deleteOrderId( idOrder : int ):
 
     except Exception as e:
         logger.error(f"An error occurred during the delete some of {SCHEMA_NAME}:{TABLE_NAME} raise {e}")
-        raise e
+        raise HTTPException( status_code=500, detail="Internal database error" )
         
     finally:
         if conn and cur:
@@ -239,10 +242,10 @@ def deleteTableId( idTable : int ):
 
         delete_sql = f'''
         DELETE FROM {SCHEMA_NAME}.{TABLE_NAME}
-        WHERE table_id = {idTable};
+        WHERE table_id = %s;
         '''
 
-        cur.execute( delete_sql )
+        cur.execute( delete_sql, ( idTable, ) )
         conn.commit()
 
         logger.info( f"Delte all the orders in the tableId from the database which was table = {idTable}" )
@@ -251,7 +254,7 @@ def deleteTableId( idTable : int ):
 
     except Exception as e:
         logger.error(f"An error occurred during the delete all of {SCHEMA_NAME}:{TABLE_NAME} raise {e}")
-        raise e
+        raise HTTPException( status_code=500, detail="Internal database error" )
 
     finally:
         if conn and cur:

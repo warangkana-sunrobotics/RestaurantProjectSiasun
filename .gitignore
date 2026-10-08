@@ -4,3 +4,16 @@ HelpFromClaude.md
 test.py
 /dags/api/testapi.py
 /docker/postgres/test.sql
+# Secrets / local config
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+
+# Airflow runtime
+/logs/*
+!/logs/Hello.txt

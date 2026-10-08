@@ -36,6 +36,9 @@ services:
       postgres:
         # Wait until Postgres is ready 
         condition: service_healthy
+    # Credentials are read at runtime, .env is not copied into the image (.dockerignore)
+    env_file:
+      - .env
     environment:
       DB_HOST: postgres
       # This variable will not overwrite when the .env was called.
