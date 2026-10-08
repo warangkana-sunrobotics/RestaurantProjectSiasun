@@ -1,10 +1,17 @@
-ARG AIRFLOW_VERSION=2.9.2
 ARG PYTHON_VERSION=3.10
 
-FROM apache/airflow:${AIRFLOW_VERSION}-python${PYTHON_VERSION}
+FROM python:${PYTHON_VERSION}
 
-ENV AIRFLOW_HOME=/opt/airflow
+WORKDIR /restaurantprojectsiasun/app
 
-COPY requirements.txt /
+COPY requirements.txt .
 
-RUN pip install --no-cache-dir "apache-airflow==${AIRFLOW_VERSION}" -r /requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Solve the import dags in python file( from api.video_stats import ... )
+ENV PYTHONPATH = /restaurantprojectsiasun/app/dags
+
+# Similar run on the local pc
+CMD ["fastapi", "run", "dags/api/API_write_data.py", "--host", "0.0.0.0", "--port", "8000" ]

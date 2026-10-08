@@ -58,12 +58,13 @@ app = FastAPI()
 load_dotenv( dotenv_path = ENV_PATH )
 
 def get_conn_cursor():
+    # The error will appear when use the "" with "" on python 3.10, f-string only use the "" to recieve the string inside, so If you want to select the valiable need to use the '' instead.
     conn = psycopg2.connect(
-        dbname=f"{os.getenv("POSTGRES_CONN_DAILY_DB")}",
-        user=f"{os.getenv("POSTGRES_CONN_DAILY_USERNAME")}",
-        password=f"{os.getenv("POSTGRES_CONN_DAILY_PASSWORD")}",
-        host="localhost",
-        port=f"{os.getenv("POSTGRES_CONN_DAILY_PORT")}"
+        host=f"{os.getenv('DB_HOST', 'localhost')}",            # <- This variable will change if It call from contianer in docker( relate to service name in docker-compose.yml )
+        dbname=f"{os.getenv('POSTGRES_CONN_DAILY_DB')}",
+        user=f"{os.getenv('POSTGRES_CONN_DAILY_USERNAME')}",
+        password=f"{os.getenv('POSTGRES_CONN_DAILY_PASSWORD')}",
+        port=f"{os.getenv('POSTGRES_CONN_DAILY_PORT')}"
     )
     cur = conn.cursor()
     return conn, cur

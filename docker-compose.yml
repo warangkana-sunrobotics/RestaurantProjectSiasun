@@ -10,6 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_CONN_DAILY_PASSWORD}
       POSTGRES_DB: ${POSTGRES_CONN_DAILY_DB}
     ports:
+      # This port will use to create the connection from local pc to postgres database
       - "${POSTGRES_CONN_DAILY_PORT}:5432"   # host 5435 -> Postgres's internal port 5432
     volumes:
     # If start with ( ./ = bind mount, it will read data on the local pc )( [name] = the docker will handle the data automatically )
@@ -20,6 +21,26 @@ services:
       interval: 10s
       retries: 5
       start_period: 5s
+    restart: unless-stopped
+
+  api:
+    # Use build command to build from the localhost( Dockerfile in localhost )
+    build: 
+      context: .
+      dockerfile: dockerfile
+    container_name: daily-api
+    ports:
+      - "8000:8000"
+    # Wait the realte service to complete run with the check healthy
+    depends_on:
+      postgres:
+        # Wait until Postgres is ready 
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      # This variable will not overwrite when the .env was called.
+      # This port will use to create the connection from fastapi to postgres database
+      POSTGRES_CONN_DAILY_PORT: 5432
     restart: unless-stopped
 
 volumes:
