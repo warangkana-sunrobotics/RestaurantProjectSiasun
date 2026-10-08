@@ -10,7 +10,11 @@
 
 import json
 
+import os
+
 from datetime import date
+
+from pathlib import Path
 
 import logging
 
@@ -28,15 +32,19 @@ import logging
 
 logger = logging.getLogger( __name__ )
 
+# <project root>/data ( /opt/airflow/data in the container ), override with RT_DATA_DIR
+DATA_DIR = Path( os.getenv( "RT_DATA_DIR", Path( __file__ ).resolve().parents[2] / "data" ) )
+
 ########################################################
 #
 #	HELPER FUNCTIONS
 #
 
-def load_data():
-    file_path = f"./data/RT_data_{date.today()}.json"
+def load_data( data_date=None ):
+    data_date = data_date or date.today()
+    file_path = DATA_DIR / f"RT_data_{data_date}.json"
     try:
-        logger.info( f"Processing file: RT_data_{date.today()}" )
+        logger.info( f"Processing file: RT_data_{data_date}" )
 
         with open( file_path, "r", encoding="utf-8" ) as raw_data:
             data = json.load( raw_data )

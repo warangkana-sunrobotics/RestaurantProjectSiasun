@@ -50,8 +50,8 @@ def staging_table():
         RT_data = load_data()
 
         # Create the storage and the table
-        create_schema( schema )
-        create_table( schema )
+        create_schema( conn, cur, schema )
+        create_table( conn, cur, schema )
 
         for row in RT_data:
             insert_rows( cur, conn, schema, row )

@@ -36,8 +36,6 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "email": "data@engineers.com",
-    "max_active_runs": 1,
-    "dagrun_timeout": timedelta(hours=1),
     "start_date": datetime(2026, 9, 8, tzinfo=local_tz),
 }
 
@@ -63,9 +61,11 @@ default_args = {
 with DAG(
     dag_id="update_db",
     default_args = default_args,
-    description = "DAG inserted data into both staging schemas",
+    description = "DAG inserted data into the staging schema",
     schedule=None,
-    catchup=False
+    catchup=False,
+    max_active_runs=1,
+    dagrun_timeout=timedelta(hours=1),
 ) as dag:
 
     # Define tasks
