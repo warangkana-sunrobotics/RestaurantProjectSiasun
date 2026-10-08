@@ -10,13 +10,9 @@
 
 1. Git pull the lastest version
 
-2. On the project directory run "docker compose up -d"
+2. On the project directory run "docker compose up -d --build"
 
-3. Get inside the API directory by "cd /dags/api"
-
-4. Run "fastapi dev API_write_data.py" ( In the future, I will deploy on the docker to run with the container in docker )
-
-5. Use the api by following the API postgres topic
+3. Use the api by following the API postgres topic
 
 # Common command [appendix]
 
