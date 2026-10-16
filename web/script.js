@@ -50,7 +50,6 @@ async function loadMenu() {
     console.warn("Load menu failed, use the default menu:", error);
   }
 }
-const PROMPTPAY_ID = "0812345678"; 
 
 // ดึงหมายเลขโต๊ะที่เลือกอยู่ปัจจุบัน
 function getCurrentTableNo() {
@@ -228,7 +227,7 @@ async function fetchAndShowBill() {
     });
 
     document.getElementById('bill-total-price').innerText = grandTotal.toFixed(2);
-    document.getElementById('qr-code-img').src = `https://promptpay.io/${PROMPTPAY_ID}/${grandTotal.toFixed(2)}.png`;
+    await renderPaymentQr(tableNo);
 
     document.getElementById('page-menu').classList.add('hidden');
     document.getElementById('page-bill').classList.remove('hidden');
@@ -237,6 +236,22 @@ async function fetchAndShowBill() {
   } catch (error) {
     console.error("Error fetching bill:", error);
     alert("ไม่สามารถดึงข้อมูลบิลได้");
+  }
+}
+
+// ขอข้อความ PromptPay (พร้อมยอดเงินของโต๊ะ) จากเซิร์ฟเวอร์ แล้ววาดเป็น QR
+// เลขบัญชีอยู่ฝั่งเซิร์ฟเวอร์ (.env) ไม่ฝังในโค้ดหน้าเว็บ
+async function renderPaymentQr(tableNo) {
+  const box = document.getElementById('qr-code-box');
+  box.innerHTML = '';
+  try {
+    const response = await fetch(`${API_BASE}/api/orders/table/${encodeURIComponent(tableNo)}/qr`);
+    if (!response.ok) throw new Error(`QR request failed: ${response.status}`);
+    const { payload } = await response.json();
+    new QRCode(box, { text: payload, width: 176, height: 176, correctLevel: QRCode.CorrectLevel.M });
+  } catch (error) {
+    console.error("Error rendering QR:", error);
+    box.textContent = 'สร้าง QR ไม่สำเร็จ';
   }
 }
 

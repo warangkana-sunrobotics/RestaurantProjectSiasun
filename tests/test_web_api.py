@@ -190,3 +190,41 @@ def test_api_key_is_not_in_the_web_files():
         assert "test-key" not in text
         key = os.getenv("API_KEY", "")
         assert not key or key not in text
+
+
+# ---------- PromptPay QR ----------
+
+def test_crc16_matches_standard_check_value():
+    # CRC-16/CCITT-FALSE check value of "123456789"
+    assert api._crc16("123456789") == "29B1"
+
+
+def test_promptpay_payload_has_amount_and_valid_crc():
+    p = api.promptpay_payload("0800000000", Decimal("185"))
+    assert "0066800000000" in p                      # phone without the leading 0
+    assert "5406185.00" in p                         # tag 54 = amount
+    assert "010212" in p                             # dynamic QR
+    assert p[-4:] == api._crc16(p[:-4])
+
+
+def test_promptpay_rejects_bad_account():
+    with pytest.raises(ValueError):
+        api.promptpay_payload("123", Decimal("1"))
+
+
+def test_qr_endpoint_sums_open_lines(client, cur, monkeypatch):
+    monkeypatch.setattr(api, "_fetch", lambda q, p=None: [{"amount": 150.0}, {"amount": 35.0}])
+    r = client.get("/api/orders/table/1/qr")
+    assert r.status_code == 200
+    assert r.json()["amount"] == 185.0
+    assert "5406185.00" in r.json()["payload"]
+
+
+def test_qr_endpoint_404_when_no_open_order(client, cur, monkeypatch):
+    monkeypatch.setattr(api, "_fetch", lambda q, p=None: [])
+    assert client.get("/api/orders/table/1/qr").status_code == 404
+
+
+def test_qr_endpoint_rejects_bad_table(client, cur):
+    assert client.get("/api/orders/table/abc/qr").status_code == 422
+    assert client.get("/api/orders/table/9/qr").status_code == 422

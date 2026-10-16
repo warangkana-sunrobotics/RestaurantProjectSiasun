@@ -6,8 +6,10 @@
   <title>ระบบสั่งอาหารและชำระเงิน - Food Management System</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- QR Code generator (วาด QR ในเครื่องลูกค้า ไม่ส่งข้อมูลออกนอก) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Google Font -->
-  
+
   <!-- เชื่อมโยงไฟล์ CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -103,9 +105,10 @@
         <div class="border-t border-slate-200 pt-5 text-center space-y-2 bg-slate-50 p-4 rounded-lg">
           <p class="text-xs font-medium text-slate-700">สแกน QR Code เพื่อชำระเงินตามยอดรวมล่าสุด</p>
           <div class="flex justify-center py-2">
-            <img id="qr-code-img" src="" alt="PromptPay QR Code" class="w-44 h-44 border border-slate-200 p-2 rounded bg-white shadow-sm">
+            <!-- QR ถูกวาดด้วย JS จากข้อความ PromptPay ที่เซิร์ฟเวอร์สร้างให้ (พร้อมยอดเงิน) -->
+            <div id="qr-code-box" class="w-48 h-48 flex items-center justify-center border border-slate-200 p-2 rounded bg-white shadow-sm"></div>
           </div>
-          <p class="text-[11px] text-slate-500 font-mono">พร้อมเพย์: 0636407429 (ร้านอาหาร)</p>
+          <p id="qr-note" class="text-[11px] text-slate-500 font-mono">QR ทดสอบ (บัญชีจำลอง) - ห้ามโอนเงินจริง</p>
         </div>
       </div>
 

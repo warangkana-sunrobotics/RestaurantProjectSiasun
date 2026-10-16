@@ -405,7 +405,59 @@ def webTableBill( tableNo : str ):
     except Exception:
         raise _db_error( f"select bill table {table_id}" )
 
-# W4. Close the bill of the table( STAFF ONLY: needs X-API-Key )
+# ---- PromptPay QR( EMV QRCPS ) : the server builds the payload so the real account never goes to the browser code ----
+# Default is a FAKE test account( phone 0800000000 ), set PROMPTPAY_ID in .env for the real one
+PROMPTPAY_ID = os.getenv( "PROMPTPAY_ID", "0800000000" )
+
+def _emv( tag, value ):
+    return f"{tag}{len( value ):02d}{value}"
+
+def _crc16( text ):
+    # CRC-16/CCITT-FALSE( poly 0x1021, init 0xFFFF ) over the payload including the "6304" tag
+    crc = 0xFFFF
+    for byte in text.encode( "ascii" ):
+        crc ^= byte << 8
+        for _ in range( 8 ):
+            crc = ( ( crc << 1 ) ^ 0x1021 if crc & 0x8000 else crc << 1 ) & 0xFFFF
+    return f"{crc:04X}"
+
+def promptpay_payload( account, amount = None ):
+    digits = "".join( c for c in account if c.isdigit() )
+    if len( digits ) == 10:                       # mobile number -> 0066 + number without the leading 0
+        target = _emv( "01", "0066" + digits[1:] )
+    elif len( digits ) == 13:                     # national id / tax id
+        target = _emv( "02", digits )
+    else:
+        raise ValueError( "PROMPTPAY_ID must be a 10 digits phone or a 13 digits id" )
+
+    body = _emv( "00", "01" ) + _emv( "01", "12" if amount else "11" )      # 12 = dynamic( one time ), 11 = static
+    body += _emv( "29", _emv( "00", "A000000677010111" ) + target )
+    body += _emv( "53", "764" ) + _emv( "58", "TH" )                        # currency THB, country TH
+    if amount:
+        body += _emv( "54", f"{Decimal( amount ):.2f}" )
+    body += "6304"
+    return body + _crc16( body )
+
+# W4. QR payload of the table with the amount of its unpaid bill
+@web.get( "/orders/table/{tableNo}/qr", dependencies = [ Depends( rate_limit( "read", RATE_LIMIT_READ ) ) ] )
+def webTableQr( tableNo : str ):
+    if not tableNo.isdigit() or len( tableNo ) > 3:
+        raise HTTPException( status_code = 422, detail = "invalid table" )
+    table_id = table_id_from( tableNo )
+    try:
+        rows = _fetch(
+            sql.SQL( "SELECT cost * quantity AS amount FROM {} WHERE table_id = %s AND status = 'open';" ).format( _table() ),
+            ( table_id, )
+        )
+    except Exception:
+        raise _db_error( f"select qr table {table_id}" )
+
+    total = sum( ( Decimal( str( r[ "amount" ] ) ) for r in rows ), Decimal( 0 ) )
+    if total <= 0:
+        raise HTTPException( status_code = 404, detail = f"table {table_id} has no unpaid order" )
+    return { "amount": float( total ), "payload": promptpay_payload( PROMPTPAY_ID, total ) }
+
+# W5. Close the bill of the table( STAFF ONLY: needs X-API-Key )
 @web.post( "/orders/checkout", dependencies = [ Depends( verify_api_key ), Depends( rate_limit( "write", RATE_LIMIT_WRITE ) ) ] )
 def webCheckout( body : Checkout ):
     table_id = table_id_from( body.tableNo )
