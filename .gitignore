@@ -4,3 +4,14 @@ HelpFromClaude.md
 test.py
 /dags/api/testapi.py
 /docker/postgres/test.sql
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store

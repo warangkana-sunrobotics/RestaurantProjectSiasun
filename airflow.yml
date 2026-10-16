@@ -90,7 +90,7 @@ x-airflow-common:
     # AIRFLOW_CONN_{CONN_ID}='my-conn-type://login:password@host:port/schema?param1=val1&param2=val2'
     
     # Connection to an external PostgreSQL database needed to store the data from the ELT process
-    AIRFLOW_CONN_POSTGRES_DB_YT_ELT: 'postgresql://${POSTGRES_CONN_USERNAME}@${POSTGRES_CONN_HOST}:${POSTGRES_CONN_PORT}/${ELT_DATABASE_NAME}'
+    AIRFLOW_CONN_POSTGRES_DB_RT_ELT: 'postgresql://${POSTGRES_CONN_USERNAME}@${POSTGRES_CONN_HOST}:${POSTGRES_CONN_PORT}/${ELT_DATABASE_NAME}'
 
     # Variables can be written as follows: 
     # AIRFLOW_VAR_{VARIABLE_NAME}

@@ -1,7 +1,8 @@
 // ==========================================
 // 1. ข้อมูลเริ่มต้น (State)
 // ==========================================
-const menuData = [
+// ค่าเริ่มต้น (สำรอง) ราคาจริงโหลดจากเซิร์ฟเวอร์ที่ /api/menu และเซิร์ฟเวอร์คิดราคาเองเสมอ
+let menuData = [
   { id: 1, name: "ข้าวมันไก่กุ๊กๆ", price: 50, category: "จานเดียว", img: "🍗" },
   { id: 2, name: "ข้าวผัดกระเพราหมูกรอบ", price: 65, category: "จานเดียว", img: "🍳" },
   { id: 3, name: "ก๋วยเตี๋ยวต้มยำกุ้ง", price: 80, category: "ต้ม/แกง", img: "🍜" },
@@ -16,6 +17,39 @@ let cartsByTable = {};
 let ordersHistoryByTable = {}; 
 
 let currentCategory = 'all';
+
+// Backend อยู่ origin เดียวกับหน้าเว็บ (FastAPI เสิร์ฟทั้งคู่) จึงไม่ต้องใช้ CORS / พอร์ตแยก
+const API_BASE = '';
+
+// ป้องกัน XSS: ชื่อเมนูที่มาจากเซิร์ฟเวอร์ต้อง escape ก่อนใส่ innerHTML
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// อ่านข้อความ error จาก API (FastAPI ใช้ detail, 422 เป็น list)
+function apiErrorMessage(result, status) {
+  if (status === 429) return 'ส่งคำขอถี่เกินไป กรุณารอสักครู่แล้วลองใหม่';
+  if (status === 401) return 'รหัสพนักงาน (API key) ไม่ถูกต้อง';
+  const d = result && (result.detail || result.message);
+  if (Array.isArray(d)) return d.map(e => e.msg).join(', ');
+  return d || 'เกิดข้อผิดพลาดไม่ทราบสาเหตุ';
+}
+
+// โหลดเมนูและราคาจริงจากเซิร์ฟเวอร์ ถ้าโหลดไม่ได้จะใช้ค่าสำรองด้านบน
+async function loadMenu() {
+  try {
+    const response = await fetch(`${API_BASE}/api/menu`);
+    if (!response.ok) return;
+    const data = await response.json();
+    if (Array.isArray(data) && data.length > 0) {
+      menuData = data.map(m => ({ ...m, price: Number(m.price) }));
+    }
+  } catch (error) {
+    console.warn("Load menu failed, use the default menu:", error);
+  }
+}
 const PROMPTPAY_ID = "0812345678"; 
 
 // ดึงหมายเลขโต๊ะที่เลือกอยู่ปัจจุบัน
@@ -113,25 +147,20 @@ async function submitOrderToAPI() {
     return;
   }
 
-  const newItems = Object.keys(currentCart).map(menuId => {
-    const item = menuData.find(m => m.id == menuId);
-    return {
-      menuId: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: currentCart[menuId]
-    };
-  });
+  // ส่งเฉพาะ menuId + จำนวน เซิร์ฟเวอร์จะหาชื่อ/ราคาจากตารางเมนูเอง (ไม่เชื่อราคาจากหน้าเว็บ)
+  const newItems = Object.keys(currentCart).map(menuId => ({
+    menuId: Number(menuId),
+    quantity: currentCart[menuId]
+  }));
 
   const payload = {
     tableNo: tableNo,
-    items: newItems,
-    roundTotal: total
+    items: newItems
   };
 
   try {
     // ส่งข้อมูลไปยัง Backend API
-    const response = await fetch('http://localhost:3000/api/orders', {
+    const response = await fetch(`${API_BASE}/api/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -147,7 +176,7 @@ async function submitOrderToAPI() {
       cartsByTable[tableNo] = {}; 
       renderMenu();
     } else {
-      alert(`เกิดข้อผิดพลาด: ${result.message}`);
+      alert(`เกิดข้อผิดพลาด: ${apiErrorMessage(result, response.status)}`);
     }
   } catch (error) {
     console.error("Error submitting order:", error);
@@ -161,7 +190,11 @@ async function fetchAndShowBill() {
 
   try {
     // ดึงประวัติรายการอาหารจาก Backend API เฉพาะของโต๊ะนี้
-    const response = await fetch(`http://localhost:3000/api/orders/table/${tableNo}`);
+    const response = await fetch(`${API_BASE}/api/orders/table/${encodeURIComponent(tableNo)}`);
+    if (!response.ok) {
+      alert(`ไม่สามารถดึงข้อมูลบิลได้: ${apiErrorMessage(await response.json().catch(() => ({})), response.status)}`);
+      return;
+    }
     const historyItems = await response.json();
 
     if (!historyItems || historyItems.length === 0) {
@@ -185,7 +218,7 @@ async function fetchAndShowBill() {
       const row = document.createElement('div');
       row.className = "flex justify-between items-center border-b border-slate-100 pb-1.5";
       row.innerHTML = `
-        <span class="font-medium">${item.name}</span>
+        <span class="font-medium">${escapeHtml(item.name)}</span>
         <div class="space-x-8">
           <span class="text-slate-500">x${item.quantity}</span>
           <span class="font-semibold">${subtotal.toFixed(2)}</span>
@@ -238,7 +271,8 @@ function filterCategory(cat, btnElement) {
 // ==========================================
 // 3. ผูก Event Listeners (DOM Event Binding)
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadMenu();
   renderMenu();
 
   // ปุ่มเปลี่ยนหมวดหมู่
@@ -261,11 +295,21 @@ document.addEventListener('DOMContentLoaded', () => {
   
   try {
     // ส่งสัญญาณไปบอก Backend Server ให้เปลี่ยนสถานะโต๊ะนี้เป็นชำระเงินแล้ว (Paid)
-    const response = await fetch('http://localhost:3000/api/orders/checkout', {
+    // การปิดบิลต้องใช้รหัสพนักงาน (API key) ถามตอนกดปุ่ม ไม่ฝังไว้ในโค้ดและไม่เก็บลงเครื่อง
+    const staffKey = window.prompt('สำหรับพนักงาน: กรอกรหัสพนักงาน (API key) เพื่อยืนยันชำระเงิน');
+    if (!staffKey) return;
+
+    const response = await fetch(`${API_BASE}/api/orders/checkout`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': staffKey },
       body: JSON.stringify({ tableNo: tableNo })
     });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      alert(`ปิดบิลไม่สำเร็จ: ${apiErrorMessage(result, response.status)}`);
+      return;
+    }
 
     if (response.ok) {
       alert(`โต๊ะ ${tableNo}: ชำระเงินเรียบร้อยแล้ว ปิดบิลสำเร็จ!`);

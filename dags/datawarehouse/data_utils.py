@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2026 
-#			Written by 
+# Copyright (C) 2026
+#			Written by
 #
 ########################################################
 #
 #	STANDARD IMPORTS
 #
 
+import logging
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
-from psycopg2.extras import RealDictCursor
-
+from psycopg2 import sql
 
 ########################################################
 #
@@ -25,58 +26,69 @@ from psycopg2.extras import RealDictCursor
 #	GLOBALS
 #
 
+logger = logging.getLogger( __name__ )
+
 table = "rt_api"
+
+# Must match AIRFLOW_CONN_POSTGRES_DB_RT_ELT in airflow.yml
+CONN_ID = "postgres_db_rt_elt"
+
+# The schema name is put into the SQL as identifier, so allow only the known names.
+ALLOWED_SCHEMAS = ( "staging", "core" )
 
 ########################################################
 #
 #	HELPER FUNCTIONS
 #
 
+def check_schema( schema ):
+    if schema not in ALLOWED_SCHEMAS:
+        raise ValueError( f"Unknown schema: {schema}" )
+    return schema
+
+
 def get_conn_cursor():
-    hook = PostgresHook( postgres_conn_id="postgres_db_rt_elt", database="elt_db" )
+    hook = PostgresHook( postgres_conn_id = CONN_ID )
     conn = hook.get_conn()
-    cur = conn.cursor( cursor_factory=RealDictCursor )
+    cur = conn.cursor()
     return conn, cur
+
 
 def close_conn_cursor( conn, cur ):
     cur.close()
     conn.close()
 
-def create_schema( schema ):
-    conn, cur = get_conn_cursor()
-    schema_sql = f"CREATE SCHEMA IF NOT EXISTS {schema};"
-    cur.execute( schema_sql )
-    conn.commit()
-    close_conn_cursor( conn, cur )
+
+def create_schema( cur, schema ):
+    check_schema( schema )
+    cur.execute( sql.SQL( "CREATE SCHEMA IF NOT EXISTS {};" ).format( sql.Identifier( schema ) ) )
 
 
-def create_table( schema ):
-    conn, cur = get_conn_cursor()
-    if schema == "staging":
-        table_sql = f"""
-                CREATE TABLE IF NOT EXISTS {schema}.{table} (
-                    "table_id" INT PRIMARY KEY NOT NULL,
-                    "menu" VARCHAR(25)
-                    "cost" INT 
-                );
+def create_table( cur, schema ):
+    '''
+    staging and core use the same structure.
+    The order_id come from the source database, so it is the primary key( 1 table can have many orders ).
+    '''
+    check_schema( schema )
+    cur.execute(
+        sql.SQL(
             """
-    if schema == "core":
-        table_sql = f"""
-                CREATE TABLE IF NOT EXISTS {schema}.{table} (
-                    "table_id" INT PRIMARY KEY NOT NULL,
-                    "menu" VARCHAR(25)
-                    "cost" INT 
-                );
+            CREATE TABLE IF NOT EXISTS {}.{} (
+                order_id  BIGINT PRIMARY KEY,
+                table_id  BIGINT        NOT NULL,
+                menu      VARCHAR(255)  NOT NULL,
+                cost      NUMERIC(10,2) NOT NULL,
+                loaded_at TIMESTAMPTZ   NOT NULL DEFAULT now()
+            );
             """
-    cur.execute( table_sql )
-    conn.commit()
-    close_conn_cursor( conn, cur )
+        ).format( sql.Identifier( schema ), sql.Identifier( table ) )
+    )
+
 
 def get_data_from_all_table( cur, schema ):
-    cur.execute(f"""SELECT "table_id" FROM {schema}.{table}; """)
-    ids = cur.fetchall()
-    table_id = [row["table_id"] for row in ids]
-    return table_id
+    check_schema( schema )
+    cur.execute( sql.SQL( "SELECT order_id FROM {}.{};" ).format( sql.Identifier( schema ), sql.Identifier( table ) ) )
+    return [ row[0] for row in cur.fetchall() ]
 
 
 ########################################################

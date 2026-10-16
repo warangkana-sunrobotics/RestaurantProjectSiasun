@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) 2026 
-#			Written by 
+# Copyright (C) 2026
+#			Written by
 #
 ########################################################
 #
@@ -9,10 +9,9 @@
 #
 
 import json
-
-from datetime import date
-
 import logging
+import os
+from pathlib import Path
 
 ########################################################
 #
@@ -28,18 +27,31 @@ import logging
 
 logger = logging.getLogger( __name__ )
 
+# dags/datawarehouse/data_loading.py -> parents[2] = project root( /opt/airflow in container )
+DATA_DIR = Path( os.getenv( "RT_DATA_DIR", Path( __file__ ).resolve().parents[2] / "data" ) )
+
 ########################################################
 #
 #	HELPER FUNCTIONS
 #
 
-def load_data():
-    file_path = f"./data/RT_data_{date.today()}.json"
+def load_data( ds ):
+    '''
+    Parameters
+    -------
+    ds: str
+        The logical date of the DAG run( YYYY-MM-DD ), the file name is RT_data_<ds>.json
+        Use the logical date instead of date.today() so the re-run / backfill read the right file.
+    '''
+    file_path = DATA_DIR / f"RT_data_{ds}.json"
     try:
-        logger.info( f"Processing file: RT_data_{date.today()}" )
+        logger.info( f"Processing file: {file_path.name}" )
 
-        with open( file_path, "r", encoding="utf-8" ) as raw_data:
+        with open( file_path, "r", encoding = "utf-8" ) as raw_data:
             data = json.load( raw_data )
+
+        if not isinstance( data, list ):
+            raise ValueError( f"{file_path} must contain the list of orders" )
 
         return data
     except FileNotFoundError:
